@@ -13,7 +13,9 @@ earth[w0][h0] = 1
 r0=1.8
 move_n=int(width*height * 0.1)
 around=8
+beds=int(width*height/1000)
 pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
+jump_distance = int(width * 0.5)
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -35,7 +37,7 @@ dead_rate=0.1/serious_days
 revive_days=10
 STATE0_MARKED=days0 + 1
 
-def next_state(state_days):
+def next_state(state_days, lack_of_beds):
     state = state_days & 0xFF00
     days = state_days & 0xFF
 
@@ -59,13 +61,16 @@ def next_state(state_days):
         if days == days1:
             new_state_days = STATE6_BLOCKER
         else:
-            if random.random() < serious_rate:
+            if (state == STATE1_INFECTION) and (random.random() < serious_rate):
                 new_state_days = STATE3_SERIOUS
             else:
                 days += 1
     elif state == STATE3_SERIOUS:
-        if days == serious_days:
-            new_state_days = STATE5_REVIVE
+        if lack_of_beds:
+            if random.random() < serious_rate:
+                new_state_days = STATE4_DEAD
+        elif days == serious_days:
+                new_state_days = STATE5_REVIVE
         else:
             if random.random() < serious_rate:
                 new_state_days = STATE4_DEAD
@@ -84,14 +89,19 @@ def next_state(state_days):
 
 now_day = 1
 dead_n = 0
+serious_beds_rate=0.0
 while True:
     state_n = [0] * 8
 
+    serious_n = 0
     for w in range(width):
         for h in range(height):
             v = earth[w][h]
-            earth[w][h] = next_state(v)
             state = v & 0xFF00
+            if state == STATE3_SERIOUS:
+                serious_n += 1
+
+            earth[w][h] = next_state(v, random.random() > serious_beds_rate)
 
             if (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
             
@@ -109,6 +119,11 @@ while True:
                     #print(r, rate, hit)
                     if hit:
                         earth[target_p[0]][target_p[1]] = STATE0_MARKED
+
+    if serious_n == 0:
+        serious_beds_rate = 0.0
+    else:
+        serious_beds_rate = beds / serious_n
 
     for w in range(width):
         for h in range(height):
@@ -141,8 +156,21 @@ while True:
     for i in range(move_n):
         x0 = int(width*random.random())
         y0 = int(height*random.random())
-        x1 = int(width*random.random())
-        y1 = int(height*random.random())
+        dx = int(jump_distance*random.random() - jump_distance/2)
+        x1 = x0 + dx
+        if (x1 >= width ) or ( x1 < 0 ):
+            x1 = x0 - dx
+        if (x1 >= width ) or ( x1 < 0 ):
+            print(x1, x0, dx)
+        assert(not ((x1 >= width ) or ( x1 < 0 )))
+
+        dy = int(jump_distance*random.random() - jump_distance/2)
+        y1 = y0 + dx
+        if (y1 >= height ) or (y1 < 0 ):
+            y1 = y0 - dx
+        if (y1 >= height ) or (y1 < 0 ):
+            print(y1, y0, dx)
+        assert(not ((y1 >= height ) or (y1 < 0 )))
         v0 = earth[x0][y0]
         v1 = earth[x1][y1]
         if ( v0 != STATE8_MOLE ) and ( v1 != STATE8_MOLE ) and ( v0 != STATE1_INFECTION ) and ( v0 != STATE1_INFECTION ) and ( v0 != STATE3_SERIOUS ) and ( v1 != STATE3_SERIOUS) and ( v0 != STATE5_REVIVE) and ( v1 != STATE5_REVIVE ) :
