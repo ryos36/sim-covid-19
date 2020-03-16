@@ -10,12 +10,14 @@ w0=int(width*random.random())
 h0=int(height*random.random())
 earth[w0][h0] = 1 
 #print(earth[1079][1919])
-r0=1.8
+r0=2.0
 move_n=int(width*height * 0.1)
 around=8
 beds=int(width*height/1000)
 pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
-jump_distance = int(width * 0.5)
+jump_distance_long = int(width * 0.5)
+jump_distance = int(width * 0.1)
+jump_distance_rate=0.9
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -30,6 +32,7 @@ STATE8_MOLE=0x800
 spreader_rate=0.5
 days0=1
 days1=14
+days2=10
 rate=r0/(days1 * around)
 serious_rate=0.1/days1
 serious_days=10
@@ -57,18 +60,26 @@ def next_state(state_days, lack_of_beds):
         else:
             days += 1
 
-    elif (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
+    elif state == STATE1_INFECTION:
         if days == days1:
             new_state_days = STATE6_BLOCKER
         else:
-            if (state == STATE1_INFECTION) and (random.random() < serious_rate):
+            if random.random() < serious_rate:
                 new_state_days = STATE3_SERIOUS
             else:
                 days += 1
+
+    elif state == STATE2_SPREADER:
+        if days == days2:
+            new_state_days = STATE6_BLOCKER
+        else:
+            days += 1
+                
     elif state == STATE3_SERIOUS:
         if lack_of_beds:
-            if random.random() < serious_rate:
-                new_state_days = STATE4_DEAD
+            for i in range(days + 1):
+                if random.random() < serious_rate:
+                    new_state_days = STATE4_DEAD
         elif days == serious_days:
                 new_state_days = STATE5_REVIVE
         else:
@@ -156,20 +167,21 @@ while True:
     for i in range(move_n):
         x0 = int(width*random.random())
         y0 = int(height*random.random())
-        dx = int(jump_distance*random.random() - jump_distance/2)
+        jdistance = jump_distance if random.random() < jump_distance_rate else jump_distance_long
+        dx = int(jdistance*random.random() - jdistance/2)
         x1 = x0 + dx
         if (x1 >= width ) or ( x1 < 0 ):
             x1 = x0 - dx
         if (x1 >= width ) or ( x1 < 0 ):
-            print(x1, x0, dx)
+            print(x1, x0, dx, jdistance)
         assert(not ((x1 >= width ) or ( x1 < 0 )))
 
-        dy = int(jump_distance*random.random() - jump_distance/2)
-        y1 = y0 + dx
+        dy = int(jdistance*random.random() - jdistance/2)
+        y1 = y0 + dy
         if (y1 >= height ) or (y1 < 0 ):
-            y1 = y0 - dx
+            y1 = y0 - dy
         if (y1 >= height ) or (y1 < 0 ):
-            print(y1, y0, dx)
+            print(y1, y0, dx, jdistance)
         assert(not ((y1 >= height ) or (y1 < 0 )))
         v0 = earth[x0][y0]
         v1 = earth[x1][y1]
