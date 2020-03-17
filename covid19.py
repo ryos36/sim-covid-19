@@ -31,8 +31,8 @@ STATE8_MOLE=0x800
 
 spreader_rate=0.5
 days0=1
-days1=14
-days2=10
+days1=12
+days2=7
 rate=r0/(days1 * around)
 serious_rate=0.1/days1
 serious_days=10
