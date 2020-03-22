@@ -39,9 +39,9 @@ def next_state(state_days, lack_of_beds):
             pass
         elif days == days0:
             if random.random() < spreader_rate:
-                new_state_days = STATE1_INFECTION
-            else:
                 new_state_days = STATE2_SPREADER
+            else:
+                new_state_days = STATE1_INFECTION
         else:
             days += 1
 
