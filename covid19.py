@@ -1,23 +1,17 @@
 import random
+from version import version
+from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days
+
+print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days)
 
 width=1920
 height=1080
 earth=[[0]*height for i in range(width)]
-#print(len(earth[0]))
-w0=500
-h0=500
 w0=int(width*random.random())
 h0=int(height*random.random())
 earth[w0][h0] = 1 
-#print(earth[1079][1919])
-r0=2.0
-move_n=int(width*height * 0.1)
-around=8
-beds=int(width*height/1000)
 pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
-jump_distance_long = int(width * 0.5)
-jump_distance = int(width * 0.1)
-jump_distance_rate=0.9
+
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -29,15 +23,6 @@ STATE6_BLOCKER=0x600
 STATE7_NO_PERSON=0x700
 STATE8_MOLE=0x800
 
-spreader_rate=0.5
-days0=1
-days1=12
-days2=7
-rate=r0/(days1 * around)
-serious_rate=0.1/days1
-serious_days=10
-dead_rate=0.1/serious_days
-revive_days=10
 STATE0_MARKED=days0 + 1
 
 def next_state(state_days, lack_of_beds):
