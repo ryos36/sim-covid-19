@@ -8,6 +8,7 @@ beds=int(width*height/1000)
 jump_distance_long = int(width * 0.5)
 jump_distance = int(width * 0.1)
 jump_distance_rate=0.9
+jump_distance_rate=1.0
 spreader_rate=0.7
 days0=1
 days1=12

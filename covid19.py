@@ -1,3 +1,4 @@
+import copy
 import random
 from version import version
 from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days
@@ -144,8 +145,14 @@ while True:
             #if ( v > 0 ) and ( v < 100):
             #    print('here', w, h, v, earth[w][h]);
 
-    print(now_day, state_n, dead_n, flush=True)
+    p_data = copy.copy(state_n)
+    p_data.insert(0, now_day)
+    p_data.append(dead_n)
+    print(p_data, flush=True)
+
     now_day += 1
+    if now_day > 120:
+        jump_distance_rate = 0.9
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
         print(state_n, state_n[6] / (width * height), dead_n)
         break
