@@ -20,4 +20,4 @@ serious_rate=0.05/days1
 serious_days=10
 dead_rate=0.05/serious_days
 revive_days=10
-
+check_n=1000
