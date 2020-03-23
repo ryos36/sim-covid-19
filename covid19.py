@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days
+from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days
 
-print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days)
+print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days)
 
 width=1920
 height=1080
@@ -87,6 +87,11 @@ def next_state(state_days, lack_of_beds):
 now_day = 1
 dead_n = 0
 serious_beds_rate=0.0
+if use_jump_distance_change_flag:
+    jump_distance_rate=jump_distance_rate_early
+else:
+    jump_distance_rate=jump_distance_rate_base
+
 while True:
     state_n = [0] * 8
 
@@ -151,8 +156,10 @@ while True:
     print(p_data, flush=True)
 
     now_day += 1
-    if now_day > 120:
-        jump_distance_rate = 0.9
+    if use_jump_distance_change_flag:
+        if now_day > jump_distance_change:
+            jump_distance_rate = jump_distance_rate_base
+
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
         print(state_n, state_n[6] / (width * height), dead_n)
         break

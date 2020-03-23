@@ -1,7 +1,6 @@
 # パラメタ
 
 ## r0
-
 r0 という言葉は適切ではない。(医学用語を正確に表していない)
 この r0 を
 around と days1 で割ることで一度の接触で
@@ -29,8 +28,19 @@ around と days1 で割ることで一度の接触で
 ## jump_distance
 人が短距離移動するときの距離。ある一定数で短距離移動をすると仮定
 
-## jump_distance_rate
+
+## jump_distance_rate_base
 人が短距離移動する率。0.9 なら移動の9割が短距離移動
+
+## jump_distance_rate_early
+初期の人が短距離移動する率。0.9 なら移動の9割が短距離移動
+
+## use_jump_distance_change_flag
+jump_distance_change を使うかどうか
+
+## jump_distance_change
+jump_distance_rate_early から jump_distance_rate_base への
+の切り替えタイミング
 
 ## spreader_rate
 感染時の発熱しない率。感染しても気が付かない人のパーセンテージ。
