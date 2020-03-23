@@ -27,6 +27,7 @@ STATE8_MOLE=0x800
 STATE0_MARKED=days0 + 1
 
 def next_state(state_days, lack_of_beds):
+    r0_hit_n = state_days & 0xFF0000
     state = state_days & 0xFF00
     days = state_days & 0xFF
 
@@ -34,6 +35,8 @@ def next_state(state_days, lack_of_beds):
     if state_days < 0:
         pass
     elif state_days == STATE0_MARKED:
+        #ダブルバッファを使ってない
+        #バグが出そう(要チェック)
         pass
     elif state == STATE0_INIT:
         if days == 0:
@@ -80,9 +83,13 @@ def next_state(state_days, lack_of_beds):
             days += 1
 
     if state == new_state_days:
-        return state + days
+        return r0_hit_n + state + days
     else:
-        return new_state_days
+        return r0_hit_n + new_state_days
+
+
+def add_r0(w, h, hit_n):
+    earth[w][h] += (hit_n << 16)
 
 now_day = 1
 dead_n = 0
@@ -93,7 +100,7 @@ else:
     jump_distance_rate=jump_distance_rate_base
 
 while True:
-    state_n = [0] * 8
+    state_n = [0] * 9
 
     serious_n = 0
     for w in range(width):
@@ -107,6 +114,7 @@ while True:
 
             if (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
             
+                hit_n = 0
                 for p in pos:
                     target_p = tuple(map(lambda x,y:x+y, (w, h), p))
                     if ((target_p[0] < 0) or (width <= target_p[0]) or
@@ -121,6 +129,10 @@ while True:
                     #print(r, rate, hit)
                     if hit:
                         earth[target_p[0]][target_p[1]] = STATE0_MARKED
+                        hit_n += 1
+
+                if hit_n > 0:
+                    add_r0(w, h, hit_n)
 
     if serious_n == 0:
         serious_beds_rate = 0.0
@@ -130,11 +142,17 @@ while True:
     for w in range(width):
         for h in range(height):
             v = earth[w][h]
-            if v >= STATE7_NO_PERSON:
+            state = v & 0xFF00
+            if state >= STATE7_NO_PERSON:
                 continue;
             if v == STATE0_MARKED:
                 earth[w][h] = 1
-            state = v & 0xFF00
+
+            if state == STATE6_BLOCKER:
+                # クラス化してないので苦労している
+                hit_n = (v & 0xFF0000) >> 16
+                state_n[8] += hit_n
+
             if state == STATE0_INIT:
                 if v == STATE0_INIT:
                     state_n[0] += 1
@@ -184,6 +202,8 @@ while True:
         assert(not ((y1 >= height ) or (y1 < 0 )))
         v0 = earth[x0][y0]
         v1 = earth[x1][y1]
-        if ( v0 != STATE8_MOLE ) and ( v1 != STATE8_MOLE ) and ( v0 != STATE1_INFECTION ) and ( v0 != STATE1_INFECTION ) and ( v0 != STATE3_SERIOUS ) and ( v1 != STATE3_SERIOUS) and ( v0 != STATE5_REVIVE) and ( v1 != STATE5_REVIVE ) :
+        s0 = v0 & 0xFF00
+        s1 = v1 & 0xFF00
+        if ( s0 != STATE8_MOLE ) and ( s1 != STATE8_MOLE ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE3_SERIOUS ) and ( s1 != STATE3_SERIOUS) and ( s0 != STATE5_REVIVE) and ( s1 != STATE5_REVIVE ) :
             earth[x0][y0], earth[x1][y1] = v1, v0
 
