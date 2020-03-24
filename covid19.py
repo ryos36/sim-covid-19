@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days
+from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n
 
-print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days)
+print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n)
 
 width=1920
 height=1080
@@ -99,9 +99,23 @@ if use_jump_distance_change_flag:
 else:
     jump_distance_rate=jump_distance_rate_base
 
+not_realized_person = 0
+
 while True:
     state_n = [0] * 9
+    check_list = [0] * 2
 
+    for i in range(check_n):
+        w=int(width*random.random())
+        h=int(height*random.random())
+        v = earth[w][h]
+        state = v & 0xFF00
+        if ( state == STATE0_INIT ) or ( state == STATE6_BLOCKER ):
+            # 発熱した数を取り除けていない
+            check_list[0] += 1
+        if ( state == STATE2_SPREADER ):
+            check_list[1] += 1
+        
     serious_n = 0
     for w in range(width):
         for h in range(height):
@@ -110,6 +124,9 @@ while True:
             if state == STATE3_SERIOUS:
                 serious_n += 1
 
+            if (v & 0xFFFF) == (STATE2_SPREADER | days2):
+                not_realized_person += 1
+                
             earth[w][h] = next_state(v, random.random() > serious_beds_rate)
 
             if (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
@@ -154,7 +171,7 @@ while True:
                 state_n[8] += hit_n
 
             if state == STATE0_INIT:
-                if v == STATE0_INIT:
+                if (v & 0xFFFF) == STATE0_INIT:
                     state_n[0] += 1
                 else:
                     state_n[7] += 1
@@ -168,10 +185,7 @@ while True:
             #if ( v > 0 ) and ( v < 100):
             #    print('here', w, h, v, earth[w][h]);
 
-    p_data = copy.copy(state_n)
-    p_data.insert(0, now_day)
-    p_data.append(dead_n)
-    print(p_data, flush=True)
+    print(now_day, state_n, dead_n, check_list, flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
@@ -179,7 +193,6 @@ while True:
             jump_distance_rate = jump_distance_rate_base
 
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
-        print(state_n, state_n[6] / (width * height), dead_n)
         break
     for i in range(move_n):
         x0 = int(width*random.random())
@@ -207,3 +220,14 @@ while True:
         if ( s0 != STATE8_MOLE ) and ( s1 != STATE8_MOLE ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE3_SERIOUS ) and ( s1 != STATE3_SERIOUS) and ( s0 != STATE5_REVIVE) and ( s1 != STATE5_REVIVE ) :
             earth[x0][y0], earth[x1][y1] = v1, v0
 
+print(state_n, state_n[6] / (width * height), dead_n)
+no_spreader_n=0
+for w in range(width):
+    for h in range(height):
+        v = earth[w][h]
+        state = v & 0xFF00
+        if state == STATE6_BLOCKER:
+            if (v & 0xFF0000) > 0:
+                no_spreader_n += 1
+print(no_spreader_n, not_realized_person)
+            
