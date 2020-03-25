@@ -192,3 +192,13 @@ r0 を計算しやすいように変更した。
 妥当なのでしょう。
 
 [annals.com](https://annals.org/aim/fullarticle/2762808/incubation-period-coronavirus-disease-2019-covid-19-from-publicly-reported?fbclid=IwAR2MjRL-XFo5rgFFwSyUNwK_f71Ffcnv1qme9bkMI3GqF5X1hrW16HD2bMw)
+
+### 14_Serious
+移動を最初から最後まで抑えた結果
+```
+294 [358579, 0, 0, 0, 0, 0, 1708958, 0, 1710927] 6063 [0, 0, 0, 0, 605596] 2240 
+```
+移動の抑制がない場合の結果
+```
+231 [336411, 0, 0, 0, 0, 0, 1724909, 0, 1728832] 12280 [0, 0, 0, 0, 506592] 3977 
+```

@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n
+from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate
 
-print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n)
+print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate)
 
 width=1920
 height=1080
@@ -25,8 +25,10 @@ STATE7_NO_PERSON=0x700
 STATE8_MOLE=0x800
 
 STATE0_MARKED=days0 + 1
+MHLW_CHECK_MARK = 0x1000000
 
 def next_state(state_days, lack_of_beds):
+    flags = state_days & 0xFF000000
     r0_hit_n = state_days & 0xFF0000
     state = state_days & 0xFF00
     days = state_days & 0xFF
@@ -34,7 +36,7 @@ def next_state(state_days, lack_of_beds):
     new_state_days = state
     if state_days < 0:
         pass
-    elif state_days == STATE0_MARKED:
+    elif (state_days & 0xFFFF) == STATE0_MARKED:
         #ダブルバッファを使ってない
         #バグが出そう(要チェック)
         pass
@@ -46,6 +48,8 @@ def next_state(state_days, lack_of_beds):
                 new_state_days = STATE2_SPREADER
             else:
                 new_state_days = STATE1_INFECTION
+                if random.random() < mhlw_check_rate:
+                    flags |= MHLW_CHECK_MARK
         else:
             days += 1
 
@@ -83,16 +87,19 @@ def next_state(state_days, lack_of_beds):
             days += 1
 
     if state == new_state_days:
-        return r0_hit_n + state + days
+        return (flags | r0_hit_n | state | days)
     else:
-        return r0_hit_n + new_state_days
+        return (flags | r0_hit_n | new_state_days)
 
 
 def add_r0(w, h, hit_n):
+    #せいぜい 10 以下程度を想定 255 は超えないだろう。
+    assert (((earth[w][h] & 0xFF0000) >> 16) + hit_n ) < 256
     earth[w][h] += (hit_n << 16)
 
 now_day = 1
 dead_n = 0
+mhlw_dead_n = 0
 serious_beds_rate=0.0
 if use_jump_distance_change_flag and (jump_distance_change_days_early > 0):
     jump_distance_rate=jump_distance_rate_early
@@ -104,23 +111,26 @@ not_realized_person = 0
 while True:
     state_n = [0] * 9
     check_list = [0] * 2
+    mhlw_list = [0] * 5
 
-    for i in range(check_n):
-        w=int(width*random.random())
-        h=int(height*random.random())
-        v = earth[w][h]
-        state = v & 0xFF00
-        if ( state == STATE0_INIT ) or ( state == STATE6_BLOCKER ):
-            # 発熱した数を取り除けていない
-            check_list[0] += 1
-        if ( state == STATE2_SPREADER ):
-            check_list[1] += 1
+    if use_check:
+        for i in range(check_n):
+            w=int(width*random.random())
+            h=int(height*random.random())
+            v = earth[w][h]
+            state = v & 0xFF00
+            if ( state == STATE0_INIT ) or ( state == STATE6_BLOCKER ):
+                # 発熱した数を取り除けていない
+                check_list[0] += 1
+            if ( state == STATE2_SPREADER ):
+                check_list[1] += 1
         
     serious_n = 0
     for w in range(width):
         for h in range(height):
             v = earth[w][h]
             state = v & 0xFF00
+            mark= v & 0xFF000000
             if state == STATE3_SERIOUS:
                 serious_n += 1
 
@@ -145,8 +155,12 @@ while True:
                     hit = (r < rate)
                     #print(r, rate, hit)
                     if hit:
-                        earth[target_p[0]][target_p[1]] = STATE0_MARKED
+                        new_v = STATE0_MARKED
+                        if mark & MHLW_CHECK_MARK:
+                            new_v |= MHLW_CHECK_MARK
+                        earth[target_p[0]][target_p[1]] = new_v
                         hit_n += 1
+                            
 
                 if hit_n > 0:
                     add_r0(w, h, hit_n)
@@ -162,8 +176,9 @@ while True:
             state = v & 0xFF00
             if state >= STATE7_NO_PERSON:
                 continue;
-            if v == STATE0_MARKED:
-                earth[w][h] = 1
+            if (v & 0xFFFF) == STATE0_MARKED:
+                # mark の引継ぎ。クラス化していないので苦労している
+                earth[w][h] = 1 | (v & 0xFF000000)
 
             if state == STATE6_BLOCKER:
                 # クラス化してないので苦労している
@@ -178,6 +193,28 @@ while True:
             else:
                 state_n[state >> 8] += 1
 
+            if (v & MHLW_CHECK_MARK) == MHLW_CHECK_MARK:
+                if state == STATE0_INIT:
+                    add_index = None
+                elif state == STATE1_INFECTION:
+                    add_index = 0
+                elif state == STATE2_SPREADER:
+                    add_index = None
+                elif state == STATE3_SERIOUS:
+                    add_index = 1
+                elif state == STATE4_DEAD:
+                    mhlw_dead_n += 1
+                    add_index = 2
+                elif state == STATE5_REVIVE:
+                    add_index = 3
+                elif state == STATE6_BLOCKER:
+                    add_index = 4
+                else:
+                    print(state, hex(v))
+                    assert False
+                if add_index != None:
+                    mhlw_list[add_index] += 1
+
             if state == STATE4_DEAD:
                 dead_n += 1
                 earth[w][h] = STATE7_NO_PERSON
@@ -185,7 +222,7 @@ while True:
             #if ( v > 0 ) and ( v < 100):
             #    print('here', w, h, v, earth[w][h]);
 
-    print(now_day, state_n, dead_n, check_list, flush=True)
+    print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
