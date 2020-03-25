@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n
+from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n
 
-print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_change, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n)
+print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, check_n)
 
 width=1920
 height=1080
@@ -94,7 +94,7 @@ def add_r0(w, h, hit_n):
 now_day = 1
 dead_n = 0
 serious_beds_rate=0.0
-if use_jump_distance_change_flag:
+if use_jump_distance_change_flag and (jump_distance_change_days_early > 0):
     jump_distance_rate=jump_distance_rate_early
 else:
     jump_distance_rate=jump_distance_rate_base
@@ -189,8 +189,13 @@ while True:
 
     now_day += 1
     if use_jump_distance_change_flag:
-        if now_day > jump_distance_change:
+        old_rate = jump_distance_rate
+        if now_day == jump_distance_change_days_early:
             jump_distance_rate = jump_distance_rate_base
+        elif now_day == jump_distance_change_days_lator:
+            jump_distance_rate = jump_distance_rate_lator
+        if old_rate != jump_distance_rate:
+            print("jump_distance_rate", old_rate, "->", jump_distance_rate)
 
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
         break
