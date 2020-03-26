@@ -1,18 +1,21 @@
 import copy
 import random
 from version import version
-from param import r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate
 
-print(version, r0, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate)
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate)
 
 width=1920
 height=1080
 earth=[[0]*height for i in range(width)]
-w0=int(width*random.random())
-h0=int(height*random.random())
-earth[w0][h0] = 1 
-pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
+for i in range(init_n):
+    w0=int(width*random.random())
+    h0=int(height*random.random())
+    if earth[w0][h0] != 0:
+        init_n -= 1
 
+    earth[w0][h0] = days0 
+pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -27,7 +30,11 @@ STATE8_MOLE=0x800
 STATE0_MARKED=days0 + 1
 MHLW_CHECK_MARK = 0x1000000
 
-def next_state(state_days, lack_of_beds):
+serious_rate_list = [0.0] * (serious_days * 2)
+
+def next_state(state_days, lack_of_beds, serious_rate_list):
+    a_disappear_n = 0
+
     flags = state_days & 0xFF000000
     r0_hit_n = state_days & 0xFF0000
     state = state_days & 0xFF00
@@ -45,9 +52,9 @@ def next_state(state_days, lack_of_beds):
             pass
         elif days == days0:
             if random.random() < spreader_rate:
-                new_state_days = STATE2_SPREADER
+                new_state_days = STATE2_SPREADER | 1
             else:
-                new_state_days = STATE1_INFECTION
+                new_state_days = STATE1_INFECTION | 1
                 if random.random() < mhlw_check_rate:
                     flags |= MHLW_CHECK_MARK
         else:
@@ -58,7 +65,7 @@ def next_state(state_days, lack_of_beds):
             new_state_days = STATE6_BLOCKER
         else:
             if random.random() < serious_rate:
-                new_state_days = STATE3_SERIOUS
+                new_state_days = STATE3_SERIOUS | 1
             else:
                 days += 1
 
@@ -70,16 +77,34 @@ def next_state(state_days, lack_of_beds):
                 
     elif state == STATE3_SERIOUS:
         if lack_of_beds:
-            for i in range(days + 1):
-                if random.random() < serious_rate:
-                    new_state_days = STATE4_DEAD
+            if len(serious_rate_list) <= days:
+                print(serious_rate_list)
+                new_serious_rate_list = [0.0] * (days * 2)
+                for i, e in enumerate(serious_rate_list):
+                    new_serious_rate_list[i] = e
+                serious_rate_list = new_serious_rate_list
+                print('new', serious_rate_list)
+            srate = serious_rate_list[days]
+            if srate == 0.0:
+                srate = (1 - serious_rate) ** days
+                serious_rate_list[days] = srate
+            if random.random() > srate:
+                new_state_days = STATE4_DEAD
+            #for i in range(days):
+            #    if random.random() < serious_rate:
+            #        new_state_days = STATE4_DEAD
+
         elif days == serious_days:
-                new_state_days = STATE5_REVIVE
+                new_state_days = STATE5_REVIVE | 1
         else:
             if random.random() < serious_rate:
                 new_state_days = STATE4_DEAD
             else:
                 days += 1
+        if new_state_days == STATE4_DEAD:
+            a_disappear_n += r0_hit_n >> 16
+            #print('a_disappear_n', a_disappear_n)
+
     elif state == STATE5_REVIVE:
         if days == revive_days:
             new_state_days = STATE6_BLOCKER
@@ -87,9 +112,9 @@ def next_state(state_days, lack_of_beds):
             days += 1
 
     if state == new_state_days:
-        return (flags | r0_hit_n | state | days)
-    else:
-        return (flags | r0_hit_n | new_state_days)
+        new_state_days = state | days
+
+    return (flags | r0_hit_n | new_state_days), a_disappear_n, serious_rate_list
 
 
 def add_r0(w, h, hit_n):
@@ -99,6 +124,8 @@ def add_r0(w, h, hit_n):
 
 now_day = 1
 dead_n = 0
+disappear_n = 0
+late_disappear_n = 0
 mhlw_dead_n = 0
 serious_beds_rate=0.0
 if use_jump_distance_change_flag and (jump_distance_change_days_early > 0):
@@ -112,6 +139,8 @@ while True:
     state_n = [0] * 9
     check_list = [0] * 2
     mhlw_list = [0] * 5
+    disappear_n += late_disappear_n
+    late_disappear_n = 0
 
     if use_check:
         for i in range(check_n):
@@ -137,7 +166,8 @@ while True:
             if (v & 0xFFFF) == (STATE2_SPREADER | days2):
                 not_realized_person += 1
                 
-            earth[w][h] = next_state(v, random.random() > serious_beds_rate)
+            earth[w][h], d_n, serious_rate_list = next_state(v, random.random() > serious_beds_rate, serious_rate_list)
+            late_disappear_n += d_n
 
             if (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
             
@@ -161,7 +191,6 @@ while True:
                         earth[target_p[0]][target_p[1]] = new_v
                         hit_n += 1
                             
-
                 if hit_n > 0:
                     add_r0(w, h, hit_n)
 
@@ -182,8 +211,9 @@ while True:
 
             if state == STATE6_BLOCKER:
                 # クラス化してないので苦労している
-                hit_n = (v & 0xFF0000) >> 16
-                state_n[8] += hit_n
+                # 治った人の感染させてしまった人の数
+                add_hit_n = (v & 0xFF0000) >> 16
+                state_n[8] += add_hit_n
 
             if state == STATE0_INIT:
                 if (v & 0xFFFF) == STATE0_INIT:
@@ -223,6 +253,7 @@ while True:
             #    print('here', w, h, v, earth[w][h]);
 
     print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
+    assert((state_n[8] + init_n + disappear_n) == (state_n[1] + state_n[2] + state_n[3] + state_n[5] + state_n[6] + state_n[7] + dead_n))
 
     now_day += 1
     if use_jump_distance_change_flag:
