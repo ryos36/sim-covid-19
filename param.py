@@ -25,7 +25,3 @@ revive_days=10
 use_check=False
 check_n=1000
 mhlw_check_rate=0.05
-
-#days0=1
-#days0=1
-#days1=12
