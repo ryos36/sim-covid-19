@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model
 
-print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate)
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model)
 
 width=1920
 height=1080
@@ -30,6 +30,7 @@ STATE8_MOLE=0x800
 STATE0_MARKED=days0 + 1
 MHLW_CHECK_MARK = 0x1000000
 HOLD_MARK = 0x2000000
+MOVED_MARK = 0x4000000
 
 serious_rate_list = [0.0] * (serious_days * 2)
 
@@ -40,6 +41,8 @@ def next_state(state_days, lack_of_beds, serious_rate_list):
     r0_hit_n = state_days & 0xFF0000
     state = state_days & 0xFF00
     days = state_days & 0xFF
+
+    flags &= ~MOVED_MARK
 
     new_state_days = state
     if state_days < 0:
@@ -158,21 +161,25 @@ while True:
                     earth[w][h] |= HOLD_MARK
         
     serious_n = 0
+    moved_n = 0
     for w in range(width):
         for h in range(height):
             v = earth[w][h]
             state = v & 0xFF00
-            mark= v & 0xFF000000
+            flags = v & 0xFF000000
             if state == STATE3_SERIOUS:
                 serious_n += 1
 
             if (v & 0xFFFF) == (STATE2_SPREADER | days2):
                 not_realized_person += 1
+
+            if (flags  & MOVED_MARK) == MOVED_MARK:
+                moved_n += 1
                 
             earth[w][h], d_n, serious_rate_list = next_state(v, random.random() > serious_beds_rate, serious_rate_list)
             late_disappear_n += d_n
 
-            if ((state == STATE1_INFECTION) or (state == STATE2_SPREADER)) and ((mark & HOLD_MARK) != HOLD_MARK):
+            if (state == STATE1_INFECTION) or ((state == STATE2_SPREADER) and ((flags  & MOVED_MARK) == 0) and ((flags  & HOLD_MARK) != HOLD_MARK)) or ((state != STATE2_SPREADER) and ((flags  & MOVED_MARK) == MOVED_MARK)):
             
                 hit_n = 0
                 for p in pos:
@@ -189,13 +196,16 @@ while True:
                     #print(r, rate, hit)
                     if hit:
                         new_v = STATE0_MARKED
-                        if mark & MHLW_CHECK_MARK:
+                        if flags  & MHLW_CHECK_MARK:
                             new_v |= MHLW_CHECK_MARK
                         earth[target_p[0]][target_p[1]] = new_v
                         hit_n += 1
                             
                 if hit_n > 0:
                     add_r0(w, h, hit_n)
+
+                #if ((state != STATE2_SPREADER) and ((flags  & MOVED_MARK) == MOVED_MARK)) and hit_n > 0:
+                #    print('moved hit:', w, h, hit_n)
 
     if serious_n == 0:
         serious_beds_rate = 0.0
@@ -212,7 +222,7 @@ while True:
             if state >= STATE7_NO_PERSON:
                 continue;
             if (v & 0xFFFF) == STATE0_MARKED:
-                # mark の引継ぎ。クラス化していないので苦労している
+                # flags の引継ぎ。クラス化していないので苦労している
                 earth[w][h] = 1 | (v & 0xFF000000)
 
             if ((flags & HOLD_MARK) == HOLD_MARK) and (state == STATE2_SPREADER):
@@ -264,6 +274,8 @@ while True:
     print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
     if use_hold:
         print('hold_n', hold_n, flush=True)
+    if use_moved_model:
+        print('moved_n', moved_n, flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
@@ -280,7 +292,8 @@ while True:
     for i in range(move_n):
         x0 = int(width*random.random())
         y0 = int(height*random.random())
-        jdistance = jump_distance if random.random() < jump_distance_rate else jump_distance_long
+        short_jump_flag = random.random() < jump_distance_rate
+        jdistance = jump_distance if short_jump_flag else jump_distance_long
         dx = int(jdistance*random.random() - jdistance/2)
         x1 = x0 + dx
         if (x1 >= width ) or ( x1 < 0 ):
@@ -300,8 +313,18 @@ while True:
         v1 = earth[x1][y1]
         s0 = v0 & 0xFF00
         s1 = v1 & 0xFF00
-        if ( s0 != STATE8_MOLE ) and ( s1 != STATE8_MOLE ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE1_INFECTION ) and ( s0 != STATE3_SERIOUS ) and ( s1 != STATE3_SERIOUS) and ( s0 != STATE5_REVIVE) and ( s1 != STATE5_REVIVE ) :
-            earth[x0][y0], earth[x1][y1] = v1, v0
+        if use_moved_model:
+            if short_jump_flag:
+                if ( s0 != STATE8_MOLE ) and ( s1 != STATE8_MOLE ) and ( s0 != STATE1_INFECTION ) and ( s1 != STATE1_INFECTION ) and ( s0 != STATE3_SERIOUS ) and ( s1 != STATE3_SERIOUS) and ( s0 != STATE5_REVIVE) and ( s1 != STATE5_REVIVE ) :
+                    earth[x0][y0], earth[x1][y1] = v1, v0
+            else:
+                if (( s0 == STATE2_SPREADER ) and ( s1 != STATE8_MOLE ) and ( s1 != STATE2_SPREADER)) or (( s1 == STATE2_SPREADER ) and ( s0 != STATE8_MOLE ) and ( s0 != STATE2_SPREADER)):
+                    earth[x0][y0] |= MOVED_MARK
+                    earth[x1][y1] |= MOVED_MARK
+                    #print('moved marked', x0, y0, x1, y1, hex(earth[x0][y0]), hex(earth[x1][y1]))
+        else:
+            if ( s0 != STATE8_MOLE ) and ( s1 != STATE8_MOLE ) and ( s0 != STATE1_INFECTION ) and ( s1 != STATE1_INFECTION ) and ( s0 != STATE3_SERIOUS ) and ( s1 != STATE3_SERIOUS) and ( s0 != STATE5_REVIVE) and ( s1 != STATE5_REVIVE ) :
+                earth[x0][y0], earth[x1][y1] = v1, v0
 
 print(state_n, state_n[6] / (width * height), dead_n)
 no_spreader_n=0
