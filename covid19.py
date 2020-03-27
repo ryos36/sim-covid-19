@@ -202,15 +202,21 @@ while True:
     else:
         serious_beds_rate = beds / serious_n
 
+    hold_n = 0
     for w in range(width):
         for h in range(height):
             v = earth[w][h]
             state = v & 0xFF00
+            flags= v & 0xFF000000
+
             if state >= STATE7_NO_PERSON:
                 continue;
             if (v & 0xFFFF) == STATE0_MARKED:
                 # mark の引継ぎ。クラス化していないので苦労している
                 earth[w][h] = 1 | (v & 0xFF000000)
+
+            if ((flags & HOLD_MARK) == HOLD_MARK) and (state == STATE2_SPREADER):
+                hold_n += 1
 
             if state == STATE6_BLOCKER:
                 # クラス化してないので苦労している
@@ -256,6 +262,8 @@ while True:
             #    print('here', w, h, v, earth[w][h]);
 
     print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
+    if use_hold:
+        print('hold_n', hold_n, flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
