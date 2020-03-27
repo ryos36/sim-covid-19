@@ -228,9 +228,10 @@ while True:
             if ((flags & HOLD_MARK) == HOLD_MARK) and (state == STATE2_SPREADER):
                 hold_n += 1
 
-            if state == STATE6_BLOCKER:
+            if (state == STATE6_BLOCKER) and (not use_moved_model):
                 # クラス化してないので苦労している
                 # 治った人の感染させてしまった人の数
+                # この計算は use_moved_model とバッティングするので抑制
                 add_hit_n = (v & 0xFF0000) >> 16
                 state_n[8] += add_hit_n
 
