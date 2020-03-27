@@ -29,7 +29,7 @@ STATE8_MOLE=0x800
 
 STATE0_MARKED=days0 + 1
 MHLW_CHECK_MARK = 0x1000000
-HOLD_MARK = 0x1000000
+HOLD_MARK = 0x2000000
 
 serious_rate_list = [0.0] * (serious_days * 2)
 

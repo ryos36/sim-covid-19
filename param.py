@@ -24,6 +24,6 @@ serious_days=20
 dead_rate=0.05/serious_days
 revive_days=1
 use_check=False
-use_hold=False
+use_hold=True
 check_n=1000
 mhlw_check_rate=0.05
