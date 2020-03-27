@@ -1,9 +1,9 @@
 import copy
 import random
 from version import version
-from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate
 
-print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, check_n, mhlw_check_rate)
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate)
 
 width=1920
 height=1080
@@ -29,6 +29,7 @@ STATE8_MOLE=0x800
 
 STATE0_MARKED=days0 + 1
 MHLW_CHECK_MARK = 0x1000000
+HOLD_MARK = 0x1000000
 
 serious_rate_list = [0.0] * (serious_days * 2)
 
@@ -142,7 +143,7 @@ while True:
     disappear_n += late_disappear_n
     late_disappear_n = 0
 
-    if use_check:
+    if use_check or use_hold:
         for i in range(check_n):
             w=int(width*random.random())
             h=int(height*random.random())
@@ -153,6 +154,8 @@ while True:
                 check_list[0] += 1
             if ( state == STATE2_SPREADER ):
                 check_list[1] += 1
+                if use_hold:
+                    earth[w][h] |= HOLD_MARK
         
     serious_n = 0
     for w in range(width):
@@ -169,7 +172,7 @@ while True:
             earth[w][h], d_n, serious_rate_list = next_state(v, random.random() > serious_beds_rate, serious_rate_list)
             late_disappear_n += d_n
 
-            if (state == STATE1_INFECTION) or (state == STATE2_SPREADER):
+            if ((state == STATE1_INFECTION) or (state == STATE2_SPREADER)) and ((mark & HOLD_MARK) != HOLD_MARK):
             
                 hit_n = 0
                 for p in pos:
@@ -253,7 +256,6 @@ while True:
             #    print('here', w, h, v, earth[w][h]);
 
     print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
-    assert((state_n[8] + init_n + disappear_n) == (state_n[1] + state_n[2] + state_n[3] + state_n[5] + state_n[6] + state_n[7] + dead_n))
 
     now_day += 1
     if use_jump_distance_change_flag:
