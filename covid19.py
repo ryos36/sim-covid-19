@@ -275,8 +275,8 @@ while True:
     print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
     if use_hold:
         print('hold_n', hold_n, flush=True)
-    if use_moved_model:
-        print('moved_n', moved_n, flush=True)
+    #if use_moved_model:
+    #    print('moved_n', moved_n, flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
