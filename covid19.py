@@ -1,9 +1,14 @@
+import cairo
+import math
 import copy
 import random
+import datetime
 from version import version
 from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model
 
 print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model)
+
+today=datetime.datetime.fromisoformat('2020-01-01')
 
 width=1920
 height=1080
@@ -33,6 +38,93 @@ HOLD_MARK = 0x2000000
 MOVED_MARK = 0x4000000
 
 serious_rate_list = [0.0] * (serious_days * 2)
+
+def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
+    file = dir + format(f'/earth{now_day:03}.png')
+    with cairo.ImageSurface(cairo.FORMAT_ARGB32, 1920, 1080) as surface:
+        context = cairo.Context(surface)
+        context.scale(1.0, 1.0)
+
+        context.set_source_rgba(1, 1, 1)
+        context.rectangle(0, 0, 1920, 1080)
+        context.fill()
+
+        context.set_font_size(40)
+        context.set_line_width(1)
+        #context.set_line_cap(1)
+        #context.set_line_join(0)
+
+        context.set_line_width(0.02 * 1080)
+        for w in range(1920):
+            for h in range(1080):
+                v = earth[w][h]
+                state = v & 0xFF00
+                days = v & 0x00FF
+                draw_flag = False
+                radius = 0.5
+                if state == STATE0_INIT:
+                    if (v & 0xFF) > 0:
+                        context.set_source_rgb(0.8, 0.0, 0.0)
+                        draw_flag = True
+                elif state == STATE1_INFECTION:
+                    context.set_source_rgb(1.0, 0.0, 0.0)
+                    draw_flag = True
+                elif state == STATE2_SPREADER:
+                    context.set_source_rgb(0.9, 0.0, 0.0)
+                    draw_flag = True
+                elif state == STATE3_SERIOUS:
+                    radius=1.0
+                    context.set_source_rgb(.7, 0.0, 0.0)
+                    draw_flag = True
+                elif state == STATE4_DEAD:
+                    radius=2.0
+                    context.set_source_rgb(0.0, 0.0, 0.0)
+                    draw_flag = True
+                elif state == STATE5_REVIVE:
+                    context.set_source_rgb(1.0, 0.4, 0.0)
+                    draw_flag = True
+                elif state == STATE6_BLOCKER:
+                    radius = 0.3
+                    if ( days <= 20 ):
+                        context.set_source_rgb(1.0 - 1.0/20 * days, 0, 0)
+                    else:
+                        p = (days - 20)/20
+                        context.set_source_rgb(p, p, p)
+                    draw_flag = True
+                else:
+                    pass
+                    #context.set_source_rgb(0.3, 0.3, 0.3)
+
+                if (v & MOVED_MARK) == MOVED_MARK:
+                    context.set_source_rgb(1.0, 0.7, 0.0)
+                    radius = 4.0
+                    
+                if draw_flag:
+                    context.arc(w, h, 1.0, 0.0, math.pi * 2.0)
+                    context.fill()
+                    context.stroke()
+
+        context.set_source_rgba(1.0, 1.0, 1.0, 0.8)
+        context.rectangle(0.0, 0.0, 250.0, 120.0)
+        context.fill()
+        context.set_source_rgb(0.0, 0.0, 0.0)
+        context.move_to(20, 50)
+        context.show_text(today.strftime('%Y/%m/%d'))
+        context.stroke()
+        if lack_of_beds:
+            if ( now_day & 0xF ) > 7: 
+                context.set_source_rgb(1.0, 0.0, 0.0)
+            else:
+                context.set_source_rgb(1.0, 1.0, 0.0)
+        else:
+            if dead_n == 0:
+                context.set_source_rgb(0.8, 0.8, 0.8)
+            else:
+                context.set_source_rgb(0.0, 0.0, 0.0)
+        context.move_to(20, 100)
+        context.show_text(f'RIP :{dead_n:05d}')
+        context.stroke()
+        surface.write_to_png(file)
 
 def next_state(state_days, lack_of_beds, serious_rate_list):
     a_disappear_n = 0
@@ -82,12 +174,12 @@ def next_state(state_days, lack_of_beds, serious_rate_list):
     elif state == STATE3_SERIOUS:
         if lack_of_beds:
             if len(serious_rate_list) <= days:
-                print(serious_rate_list)
+                #print(serious_rate_list)
                 new_serious_rate_list = [0.0] * (days * 2)
                 for i, e in enumerate(serious_rate_list):
                     new_serious_rate_list[i] = e
                 serious_rate_list = new_serious_rate_list
-                print('new', serious_rate_list)
+                #print('new', serious_rate_list)
             srate = serious_rate_list[days]
             if srate == 0.0:
                 srate = (1 - serious_rate) ** days
@@ -112,6 +204,11 @@ def next_state(state_days, lack_of_beds, serious_rate_list):
     elif state == STATE5_REVIVE:
         if days == revive_days:
             new_state_days = STATE6_BLOCKER
+        else:
+            days += 1
+    elif state == STATE6_BLOCKER:
+        if days == 64:
+            days = 64
         else:
             days += 1
 
@@ -145,6 +242,9 @@ while True:
     mhlw_list = [0] * 5
     disappear_n += late_disappear_n
     late_disappear_n = 0
+
+    draw_image('images', now_day, earth, dead_n, (1.0 >= serious_beds_rate) and (serious_beds_rate > 0.0))
+    today += datetime.timedelta(days=1)
 
     if use_check or use_hold:
         for i in range(check_n):
