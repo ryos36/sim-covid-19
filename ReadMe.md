@@ -25,6 +25,8 @@ python3 covid19.py
 # Requirement
 python3
 cairo
+PIL
+numpy
 
 # Licence
 

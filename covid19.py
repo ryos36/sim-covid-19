@@ -1,26 +1,15 @@
+import os
 import cairo
 import math
 import copy
 import random
 import datetime
+from PIL import Image
+import numpy as np
 from version import version
-from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days
 
-print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model)
-
-today=datetime.datetime.fromisoformat('2020-01-01')
-
-width=1920
-height=1080
-earth=[[0]*height for i in range(width)]
-for i in range(init_n):
-    w0=int(width*random.random())
-    h0=int(height*random.random())
-    if earth[w0][h0] != 0:
-        init_n -= 1
-
-    earth[w0][h0] = days0 
-pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days)
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -37,7 +26,36 @@ MHLW_CHECK_MARK = 0x1000000
 HOLD_MARK = 0x2000000
 MOVED_MARK = 0x4000000
 
+today=datetime.datetime.fromisoformat('2020-01-01')
+
+width=1920
+height=1080
+earth=[[0]*height for i in range(width)]
+if os.path.exists('map.png'):
+    im = np.array(Image.open('map.png'))
+    for w in range(im.shape[1]):
+        for h in range(im.shape[0]):
+            color = im[h][w]
+            if color[0] == 0:
+                earth[w][h] = STATE8_MOLE
+
+tmp_init_n = init_n
+for i in range(tmp_init_n):
+    w0=int(width*random.random())
+    h0=int(height*random.random())
+    if earth[w0][h0] != 0:
+        init_n -= 1
+        if init_n == 0:
+            init_n = 1
+            i -= 1
+
+    earth[w0][h0] = days0 
+pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
+
+
 serious_rate_list = [0.0] * (serious_days * 2)
+lock_down_flag=False
+lock_down_remain_days=0
 
 def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
     file = dir + format(f'/earth{now_day:03}.png')
@@ -49,10 +67,7 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
         context.rectangle(0, 0, 1920, 1080)
         context.fill()
 
-        context.set_font_size(40)
         context.set_line_width(1)
-        #context.set_line_cap(1)
-        #context.set_line_join(0)
 
         context.set_line_width(0.02 * 1080)
         for w in range(1920):
@@ -91,6 +106,9 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
                         p = (days - 20)/20
                         context.set_source_rgb(p, p, p)
                     draw_flag = True
+                elif state == STATE8_MOLE:
+                    draw_flag = True
+                    context.set_source_rgb(0.0, 0.0, 0.5)
                 else:
                     pass
                     #context.set_source_rgb(0.3, 0.3, 0.3)
@@ -104,26 +122,35 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
                     context.fill()
                     context.stroke()
 
+        context.set_font_size(50)
         context.set_source_rgba(1.0, 1.0, 1.0, 0.8)
-        context.rectangle(0.0, 0.0, 250.0, 120.0)
+        context.rectangle(0.0, 0.0, 310.0, 140.0)
         context.fill()
         context.set_source_rgb(0.0, 0.0, 0.0)
-        context.move_to(20, 50)
+        context.move_to(20, 60)
         context.show_text(today.strftime('%Y/%m/%d'))
         context.stroke()
         if lack_of_beds:
-            if ( now_day & 0xF ) > 7: 
+            if ( now_day & 0x7 ) > 2: 
                 context.set_source_rgb(1.0, 0.0, 0.0)
             else:
-                context.set_source_rgb(1.0, 1.0, 0.0)
+                context.set_source_rgb(0.9, 0.9, 0.0)
         else:
             if dead_n == 0:
                 context.set_source_rgb(0.8, 0.8, 0.8)
             else:
                 context.set_source_rgb(0.0, 0.0, 0.0)
-        context.move_to(20, 100)
-        context.show_text(f'RIP :{dead_n:05d}')
+        context.move_to(20, 120)
+        context.show_text(f'RIP: {dead_n:05d}')
         context.stroke()
+
+        if lock_down_flag:
+            context.set_font_size(100)
+            context.move_to(570, 580)
+            context.set_source_rgb(1.0, 0.3, 0.0)
+            context.show_text(f'LOCK DOWN: {lock_down_days - lock_down_remain_days + 1:2d}')
+            context.stroke()
+
         surface.write_to_png(file)
 
 def next_state(state_days, lack_of_beds, serious_rate_list):
@@ -243,7 +270,8 @@ while True:
     disappear_n += late_disappear_n
     late_disappear_n = 0
 
-    draw_image('images', now_day, earth, dead_n, (1.0 >= serious_beds_rate) and (serious_beds_rate > 0.0))
+    if make_image:
+        draw_image('images', now_day, earth, dead_n, (1.0 >= serious_beds_rate) and (serious_beds_rate > 0.0))
     today += datetime.timedelta(days=1)
 
     if use_check or use_hold:
@@ -311,6 +339,22 @@ while True:
         serious_beds_rate = 0.0
     else:
         serious_beds_rate = beds / serious_n
+
+    if lock_down_flag:
+        if (lock_down_remain_days > 0) and ((beds * lock_down_rate) < serious_n):
+            lock_down_remain_days -= 1
+        else:
+            lock_down_remain_days = unlock_down_days
+            lock_down_flag = False
+    elif use_lock_down and ((beds * lock_down_rate) < serious_n):
+        if lock_down_remain_days > 0:
+            assert lock_down_flag == False
+            lock_down_remain_days -= 1
+        else:
+            lock_down_flag = True
+            lock_down_remain_days = lock_down_days - 1
+    else:
+        lock_down_flag = False
 
     hold_n = 0
     for w in range(width):
@@ -390,6 +434,9 @@ while True:
 
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
         break
+    if lock_down_flag:
+        # skip move
+        continue
     for i in range(move_n):
         x0 = int(width*random.random())
         y0 = int(height*random.random())
