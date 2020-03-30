@@ -26,6 +26,8 @@ MHLW_CHECK_MARK = 0x1000000
 HOLD_MARK = 0x2000000
 MOVED_MARK = 0x4000000
 
+IMAGES_DIR='images'
+
 today=datetime.datetime.fromisoformat('2020-01-01')
 
 width=1920
@@ -40,16 +42,19 @@ if os.path.exists('map.png'):
                 earth[w][h] = STATE8_MOLE
 
 tmp_init_n = init_n
-for i in range(tmp_init_n):
-    w0=int(width*random.random())
-    h0=int(height*random.random())
-    if earth[w0][h0] != 0:
-        init_n -= 1
-        if init_n == 0:
-            init_n = 1
-            i -= 1
+while True:
+    init_n = tmp_init_n
+    for i in range(tmp_init_n):
+        w0=int(width*random.random())
+        h0=int(height*random.random())
+        if earth[w0][h0] != 0:
+            init_n -= 1
+            if init_n == 0:
+                break
+        earth[w0][h0] = days0 
+    if init_n != 0:
+        break
 
-    earth[w0][h0] = days0 
 pos = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, -1), (-1, 1), (0, 1), (1, 1)]
 
 
@@ -263,6 +268,10 @@ else:
 
 not_realized_person = 0
 
+if make_image:
+    if not os.path.exists(IMAGES_DIR):
+        os.mkdir(IMAGES_DIR)
+
 while True:
     state_n = [0] * 9
     check_list = [0] * 2
@@ -271,7 +280,7 @@ while True:
     late_disappear_n = 0
 
     if make_image:
-        draw_image('images', now_day, earth, dead_n, (1.0 >= serious_beds_rate) and (serious_beds_rate > 0.0))
+        draw_image(IMAGES_DIR, now_day, earth, dead_n, (1.0 >= serious_beds_rate) and (serious_beds_rate > 0.0))
     today += datetime.timedelta(days=1)
 
     if use_check or use_hold:
@@ -447,16 +456,18 @@ while True:
         if (x1 >= width ) or ( x1 < 0 ):
             x1 = x0 - dx
         if (x1 >= width ) or ( x1 < 0 ):
-            print(x1, x0, dx, jdistance)
-        assert(not ((x1 >= width ) or ( x1 < 0 )))
+            #print(x1, x0, dx, jdistance)
+            continue
+        #assert(not ((x1 >= width ) or ( x1 < 0 )))
 
         dy = int(jdistance*random.random() - jdistance/2)
         y1 = y0 + dy
         if (y1 >= height ) or (y1 < 0 ):
             y1 = y0 - dy
         if (y1 >= height ) or (y1 < 0 ):
-            print(y1, y0, dx, jdistance)
-        assert(not ((y1 >= height ) or (y1 < 0 )))
+            #print(y1, y0, dx, jdistance)
+            continue
+        #assert(not ((y1 >= height ) or (y1 < 0 )))
         v0 = earth[x0][y0]
         v1 = earth[x1][y1]
         s0 = v0 & 0xFF00
