@@ -23,9 +23,9 @@ python3 covid19.py
 他人に感染させなかった人の数, 感染に気が付かずに治った人の数
 
 # Requirement
-python3
-cairo
-PIL
+python3  
+cairo(1.17.0 or lator)  
+PIL  
 numpy
 
 # Licence

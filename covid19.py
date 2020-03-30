@@ -113,7 +113,10 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
                     draw_flag = True
                 elif state == STATE8_MOLE:
                     draw_flag = True
-                    context.set_source_rgb(0.0, 0.0, 0.5)
+                    if lack_of_beds:
+                        context.set_source_rgb(0.8, 0.0, 0.0)
+                    else:
+                        context.set_source_rgb(0.0, 0.0, 0.5)
                 else:
                     pass
                     #context.set_source_rgb(0.3, 0.3, 0.3)
@@ -136,10 +139,7 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
         context.show_text(today.strftime('%Y/%m/%d'))
         context.stroke()
         if lack_of_beds:
-            if ( now_day & 0x7 ) > 2: 
-                context.set_source_rgb(1.0, 0.0, 0.0)
-            else:
-                context.set_source_rgb(0.9, 0.9, 0.0)
+            context.set_source_rgb(1.0, 0.0, 0.0)
         else:
             if dead_n == 0:
                 context.set_source_rgb(0.8, 0.8, 0.8)
