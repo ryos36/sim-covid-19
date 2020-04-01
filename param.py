@@ -1,11 +1,13 @@
 width=1920
 height=1080
+people=955676
+people=width * height
 
 r0=2.8
 init_n=1
 move_n=80000
 around=8
-beds=int(width*height/1000)
+beds=int(people/1000)
 jump_distance_long = int(width * 0.5)
 jump_distance = 30
 jump_distance_rate_early=0.6

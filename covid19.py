@@ -41,12 +41,17 @@ width=1920
 height=1080
 earth=[[0]*height for i in range(width)]
 if os.path.exists('map.png'):
+    local_people_n = 0
     im = np.array(Image.open('map.png'))
     for w in range(im.shape[1]):
         for h in range(im.shape[0]):
             color = im[h][w]
             if color[0] == 0:
                 earth[w][h] = STATE8_MOLE
+            else:
+                local_people_n += 1
+
+    beds=int(local_people_n/1000)
 
 tmp_init_n = init_n
 while True:
