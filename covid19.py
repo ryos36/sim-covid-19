@@ -7,9 +7,9 @@ import datetime
 from PIL import Image
 import numpy as np
 from version import version
-from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0, start_date
 
-print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0)
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0, start_date)
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -33,6 +33,9 @@ if start_date != None:
 else:
     today=None
 
+current_lock_down_days=lock_down_days0
+current_unlock_down_days=unlock_down_days0
+last_one_day_serious_n = 0
 
 width=1920
 height=1080
@@ -117,7 +120,10 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
                     draw_flag = True
                 elif state == STATE8_MOLE:
                     draw_flag = True
-                    context.set_source_rgb(0.0, 0.0, 0.5)
+                    if lack_of_beds:
+                        context.set_source_rgb(0.8, 0.0, 0.0)
+                    else:
+                        context.set_source_rgb(0.0, 0.0, 0.5)
                 else:
                     pass
                     #context.set_source_rgb(0.3, 0.3, 0.3)

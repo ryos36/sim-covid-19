@@ -35,3 +35,5 @@ lock_down_days0=28
 lock_down_days=21
 unlock_down_days0=7
 unlock_down_days=7
+start_date='2020-01-01'
+start_date=None
