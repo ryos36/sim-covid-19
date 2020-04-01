@@ -7,9 +7,9 @@ import datetime
 from PIL import Image
 import numpy as np
 from version import version
-from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, start_date
+from param import r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0
 
-print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, start_date)
+print(version, r0, init_n, move_n, around, beds, jump_distance_long , jump_distance , jump_distance_rate_base, jump_distance_rate_early, jump_distance_rate_lator, jump_distance_change_days_early, jump_distance_change_days_lator, use_jump_distance_change_flag, spreader_rate, days0, days1, days2, rate, serious_rate, serious_days, dead_rate, revive_days, use_check, use_hold, check_n, mhlw_check_rate, use_moved_model, make_image, use_lock_down, lock_down_rate, lock_down_days, unlock_down_days, lock_down_days0, unlock_down_days0)
 
 STATE0_INIT=0
 STATE1_INFECTION=0x100
@@ -117,10 +117,7 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
                     draw_flag = True
                 elif state == STATE8_MOLE:
                     draw_flag = True
-                    if lack_of_beds:
-                        context.set_source_rgb(0.8, 0.0, 0.0)
-                    else:
-                        context.set_source_rgb(0.0, 0.0, 0.5)
+                    context.set_source_rgb(0.0, 0.0, 0.5)
                 else:
                     pass
                     #context.set_source_rgb(0.3, 0.3, 0.3)
@@ -160,7 +157,7 @@ def draw_image(dir, now_day, earth, dead_n, lack_of_beds):
             context.set_font_size(100)
             context.move_to(570, 580)
             context.set_source_rgb(1.0, 0.3, 0.0)
-            context.show_text(f'LOCK DOWN: {lock_down_days - lock_down_remain_days + 1:2d}')
+            context.show_text(f'緊急事態 : {current_lock_down_days - lock_down_remain_days + 1:2d}')
             context.stroke()
 
         surface.write_to_png(file)
@@ -357,21 +354,6 @@ while True:
     else:
         serious_beds_rate = beds / serious_n
 
-    if lock_down_flag:
-        if (lock_down_remain_days > 0) and ((beds * lock_down_rate) < serious_n):
-            lock_down_remain_days -= 1
-        else:
-            lock_down_remain_days = unlock_down_days
-            lock_down_flag = False
-    elif use_lock_down and ((beds * lock_down_rate) < serious_n):
-        if lock_down_remain_days > 0:
-            assert lock_down_flag == False
-            lock_down_remain_days -= 1
-        else:
-            lock_down_flag = True
-            lock_down_remain_days = lock_down_days - 1
-    else:
-        lock_down_flag = False
 
     hold_n = 0
     for w in range(width):
@@ -433,11 +415,34 @@ while True:
             #if ( v > 0 ) and ( v < 100):
             #    print('here', w, h, v, earth[w][h]);
 
-    print(now_day, state_n, dead_n, mhlw_list, mhlw_dead_n, check_list if use_check else '', flush=True)
+    if lock_down_flag:
+        if (lock_down_remain_days > 0) and ((beds * lock_down_rate) < serious_n):
+            lock_down_remain_days -= 1
+        else:
+            lock_down_remain_days = current_unlock_down_days
+            current_unlock_down_days = unlock_down_days
+            lock_down_flag = False
+            current_lock_down_days = lock_down_days
+            last_one_day_serious_n = state_n[STATE3_SERIOUS >> 8]
+    elif use_lock_down and ((beds * lock_down_rate) < serious_n):
+        if lock_down_remain_days > 0:
+            assert lock_down_flag == False
+            lock_down_remain_days -= 1
+        else:
+            if last_one_day_serious_n < state_n[STATE3_SERIOUS >> 8]:
+                lock_down_flag = True
+                lock_down_remain_days = current_lock_down_days - 1
+            else:
+                #print('#no lockdown')
+                pass
+    else:
+        lock_down_flag = False
+
+    print(now_day, state_n, dead_n, mhlw_list if mhlw_check_rate > 0.0 else '', mhlw_dead_n if mhlw_check_rate > 0.0 else '', check_list if use_check else '', ', lockdown' if lock_down_flag else '', flush=True)
     if use_hold:
-        print('hold_n', hold_n, flush=True)
+        print('#hold_n', hold_n, flush=True)
     #if use_moved_model:
-    #    print('moved_n', moved_n, flush=True)
+    #    print('#moved_n', moved_n, flush=True)
 
     now_day += 1
     if use_jump_distance_change_flag:
@@ -447,7 +452,7 @@ while True:
         elif now_day == jump_distance_change_days_lator:
             jump_distance_rate = jump_distance_rate_lator
         if old_rate != jump_distance_rate:
-            print("jump_distance_rate", old_rate, "->", jump_distance_rate)
+            print("#jump_distance_rate", old_rate, "->", jump_distance_rate)
 
     if (state_n[1] == 0) and (state_n[2] == 0) and (state_n[3] == 0) and (state_n[5] == 0) and (state_n[7] == 0):
         break
